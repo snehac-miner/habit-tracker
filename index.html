@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f6f0">
+    <title>Day by day — Habit tracker</title>
+    <script>
+      window.habitTheme = {
+        storageKey: "day-by-day.theme.v1",
+        preference: null,
+        error: "",
+        system: window.matchMedia("(prefers-color-scheme: dark)"),
+        apply() {
+          const theme = this.preference || (this.system.matches ? "dark" : "light");
+          document.documentElement.dataset.theme = theme;
+          document.querySelector('meta[name="theme-color"]').content =
+            theme === "dark" ? "#18211c" : "#f5f6f0";
+        },
+        load() {
+          this.preference = null;
+          this.error = "";
+          try {
+            const saved = localStorage.getItem(this.storageKey);
+            if (saved !== null && saved !== "light" && saved !== "dark") {
+              throw new Error("Unrecognized theme preference.");
+            }
+            this.preference = saved;
+          } catch (error) {
+            console.error("Could not load theme preference:", error);
+            this.error = "Your theme preference could not be loaded. Using your system theme.";
+          }
+          this.apply();
+        },
+      };
+      window.habitTheme.load();
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="app">
+      <header class="page-header">
+        <a class="wordmark" href="./" aria-label="Day by day home">
+          <span class="brand-mark" aria-hidden="true">d.</span>
+          day by day
+        </a>
+        <div class="header-actions">
+          <p id="today" class="date"></p>
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">Dark mode</button>
+        </div>
+      </header>
+      <p id="theme-error" class="error theme-error" role="alert" hidden></p>
+
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">SMALL STEPS. REAL PROGRESS.</p>
+        <h1 id="page-title">Good habits,<br>one day at a time.</h1>
+        <p class="intro-copy">A little consistency goes a long way. Make room for what matters.</p>
+      </section>
+
+      <section class="add-section" aria-labelledby="add-title">
+        <h2 id="add-title">What would you like to build?</h2>
+        <form id="habit-form">
+          <label class="sr-only" for="habit-name">Habit name</label>
+          <input id="habit-name" name="habit" type="text" maxlength="80"
+            placeholder="e.g. Read for 20 minutes" autocomplete="off" required>
+          <button class="add-button" type="submit"><span aria-hidden="true">+</span> Add habit</button>
+        </form>
+        <p id="error-message" class="error" role="alert" hidden></p>
+      </section>
+
+      <section class="habits-section" aria-labelledby="habits-title">
+        <div class="section-heading">
+          <h2 id="habits-title">Your daily rituals</h2>
+          <p id="progress" aria-live="polite">0 of 0 done today</p>
+        </div>
+        <div class="progress-track" aria-hidden="true"><div id="progress-fill"></div></div>
+        <div id="habit-list" class="habit-list"></div>
+        <div id="empty-state" class="empty-state">
+          <span class="empty-icon" aria-hidden="true">↗</span>
+          <h3>A fresh start, every day.</h3>
+          <p>Add your first habit above. Keep it small, make it yours.</p>
+        </div>
+      </section>
+
+      <footer>
+        <p>Progress, not perfection.</p>
+        <p>Saved in this browser. Just for you.</p>
+      </footer>
+      <p id="announcement" class="sr-only" role="status"></p>
+    </main>
+  </body>
+</html>
