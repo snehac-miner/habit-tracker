@@ -1,0 +1,46 @@
+name: Issue to Copilot PR
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue-to-pr-${{ github.repository }}-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  assign-copilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out trusted workflow code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Check issue author's repository access
+        id: author
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { authorize } = require('./.github/scripts/assign-copilot.cjs');
+            return await authorize({ github, context, core });
+      - name: Check assignment token
+        if: steps.author.outputs.result == 'true'
+        env:
+          ASSIGNMENT_TOKEN: ${{ secrets.COPILOT_ASSIGNMENT_TOKEN }}
+        run: |
+          if [ -z "$ASSIGNMENT_TOKEN" ]; then
+            echo "::error::Add the COPILOT_ASSIGNMENT_TOKEN repository secret. See README.md for required Copilot access and token permissions."
+            exit 1
+          fi
+      - name: Assign issue to Copilot
+        if: steps.author.outputs.result == 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.COPILOT_ASSIGNMENT_TOKEN }}
+          script: |
+            const { assign } = require('./.github/scripts/assign-copilot.cjs');
+            await assign({ github, context, core });
