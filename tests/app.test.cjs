@@ -9,8 +9,18 @@ const source = readFileSync(join(root, "app.js"), "utf8");
 const html = readFileSync(join(root, "index.html"), "utf8");
 const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 
-function createContext({ dark = false, saved = null, blocked = false } = {}) {
+function createContext({ dark = false, saved = null, blocked = false, now = new Date() } = {}) {
   const elements = new Map();
+  const timers = [];
+  class TestDate extends Date {
+    constructor(...args) {
+      super(...(args.length ? args : [now]));
+    }
+
+    static now() {
+      return now.getTime();
+    }
+  }
   const document = {
     documentElement: { dataset: {} },
     querySelector(selector) {
@@ -27,6 +37,7 @@ function createContext({ dark = false, saved = null, blocked = false } = {}) {
     addEventListener() {},
   };
   const context = vm.createContext({
+    Date: TestDate,
     document,
     window: {
       matchMedia: () => ({ matches: dark, addEventListener() {} }),
@@ -39,12 +50,28 @@ function createContext({ dark = false, saved = null, blocked = false } = {}) {
       },
     },
     console: { error() {} },
-    setInterval() {},
+    setTimeout(callback, delay) {
+      timers.push({ callback, delay });
+    },
   });
+  context.timers = timers;
   vm.runInContext(bootstrap, context);
   vm.runInContext(source, context);
   return context;
 }
+
+test("date refresh schedules local midnight instead of polling", () => {
+  const now = new Date(2026, 5, 11, 12, 34, 56);
+  const context = createContext({ now });
+  const expectedDelay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() -
+    now.getTime();
+  assert.equal(context.timers.length, 1);
+  assert.equal(context.timers[0].delay, expectedDelay);
+
+  context.timers[0].callback();
+  assert.equal(context.timers.length, 2);
+  assert.equal(context.timers[1].delay, expectedDelay);
+});
 
 test("local calendar dates, weekly ranges, and streak boundaries", () => {
   const previousZone = process.env.TZ;

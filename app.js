@@ -241,6 +241,15 @@ function refreshDate() {
   if (displayedDate !== localDateKey(new Date())) render();
 }
 
+function scheduleDateRefresh() {
+  const now = new Date();
+  const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  setTimeout(() => {
+    refreshDate();
+    scheduleDateRefresh();
+  }, nextMidnight.getTime() - now.getTime());
+}
+
 window.addEventListener("focus", refreshDate);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) refreshDate();
@@ -256,6 +265,6 @@ window.addEventListener("storage", (event) => {
     render();
   }
 });
-setInterval(refreshDate, 1000);
 loadHabits();
 render();
+scheduleDateRefresh();
